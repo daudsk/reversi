@@ -240,9 +240,26 @@ function advancedCpuMove(player, board) {
   return result.move;
 }
 
+async function chooseGameMode() {
+  return new Promise((resolve) => {
+    console.log("Select game mode:");
+    console.log("1. Human vs. Human");
+    console.log("2. Human vs. CPU");
+    rl.question("Enter your choice (1 or 2): ", (input) => {
+      if (input === "1" || input === "2") {
+        resolve(input);
+      } else {
+        console.log("Invalid choice. Please try again.");
+        resolve(chooseGameMode());
+      }
+    });
+  });
+}
+
 async function main() {
   const board = initBoard();
   let currentPlayer = "B"; // Start with Black
+  const gameMode = await chooseGameMode();
 
   while (!isGameOver(board)) {
     displayBoard(board);
@@ -251,10 +268,9 @@ async function main() {
       console.log(`No valid moves for player ${currentPlayer}. Pass.`);
     } else {
       let move;
-      if (currentPlayer === "B") {
+      if (gameMode === "1" || (gameMode === "2" && currentPlayer === "B")) {
         move = await humanMove(currentPlayer, board);
       } else {
-        // Replace the cpuMove() function call with advancedCpuMove()
         move = advancedCpuMove(currentPlayer, board);
         if (move === null) {
           console.log(`No valid moves for player ${currentPlayer}. Pass.`);
@@ -278,3 +294,4 @@ async function main() {
 }
 
 main();
+

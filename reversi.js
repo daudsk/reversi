@@ -1,108 +1,128 @@
-const readline = require("readline");
-
+const readline = require('readline');
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
 
-// Initialize the game board
-function initBoard() {
+// Board dimensions
+const SIZE = 8;
+
+// Directions for checking valid moves and flipping pieces
+const directions = [
+  [-1, -1], [-1, 0], [-1, 1],
+  [0, -1],           [0, 1],
+  [1, -1], [1, 0], [1, 1]
+];
+
+// Create an empty board
+function createBoard() {
   const board = [];
-  for (let i = 0; i < 8; i++) {
-    board[i] = new Array(8).fill(".");
+  for (let i = 0; i < SIZE; i++) {
+    board[i] = [];
+    for (let j = 0; j < SIZE; j++) {
+      board[i][j] = '.';
+    }
   }
-  board[3][3] = "W";
-  board[3][4] = "B";
-  board[4][3] = "B";
-  board[4][4] = "W";
+  // Initialize the starting pieces
+  board[3][3] = 'W';
+  board[3][4] = 'B';
+  board[4][3] = 'B';
+  board[4][4] = 'W';
   return board;
 }
 
-// Display the game board
-function displayBoard(board) {
-  console.log("  0 1 2 3 4 5 6 7");
+// Print the current board state
+// function printBoard(board) {
+//   console.log('  0 1 2 3 4 5 6 7');
+//   for (let i = 0; i < SIZE; i++) {
+//     let row = `${i}`;
+//     for (let j = 0; j < SIZE; j++) {
+//       row += ` ${board[i][j]}`;
+//     }
+//     console.log(row);
+ 
+//   }
+// }
+
+function printBoard(board) {
+  console.log('  0 1 2 3 4 5 6 7');
   for (let i = 0; i < 8; i++) {
-    let row = `${i}`;
+    let row = `${i} `;
     for (let j = 0; j < 8; j++) {
-      row += ` ${board[i][j]}`;
+      const cell = board[i][j];
+      if (cell === 'B') {
+        row += '○ '; // black disc goes here
+      } else if (cell === 'W') {
+        row += '● '; // white disc goes here
+      } else {
+        row += '. ';
+      }
     }
     console.log(row);
   }
 }
 
-// Get all valid moves for the current player
-function getValidMoves(player, board) {
-  const opponent = player === "B" ? "W" : "B";
-  const validMoves = [];
 
-  for (let i = 0; i < 8; i++) {
-    for (let j = 0; j < 8; j++) {
-      if (board[i][j] === ".") {
-        const move = [i, j];
-        for (const dir of directions) {
-          const flips = getFlips(move, player, opponent, board, dir);
-          if (flips.length > 0) {
-            validMoves.push(move);
-            break;
-          }
-        }
+// Calculate the current score for both players
+function score(board) {
+  let W = 0;
+  let B = 0;
+  for (let i = 0; i < SIZE; i++) {
+    for (let j = 0; j < SIZE; j++) {
+      if (board[i][j] === 'W') {
+        W++;
+      } else if (board[i][j] === 'B') {
+        B++;
       }
     }
   }
-
-  return validMoves;
+  return { W, B };
 }
 
 // Check if the game is over
 function isGameOver(board) {
-  return (
-    getValidMoves("B", board).length === 0 &&
-    getValidMoves("W", board).length === 0
-  );
+  for (let i = 0; i < SIZE; i++) {
+    for (let j = 0; j < SIZE; j++) {
+      if (board[i][j] === '.') {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
-// Calculate the score for both players
-function score(board) {
-  let W = 0;
-  let B = 0;
+// Check if a move is valid
+function isValidMove(x, y, player, board) {
+  if (x < 0 || x >= SIZE || y < 0 || y >= SIZE || board[x][y] !== '.') {
+    return false;
+  }
 
-  for (const row of board) {
-    for (const cell of row) {
-      if (cell === "W") W++;
-      if (cell === "B") B++;
+  const opponent = player === 'B' ? 'W' : 'B';
+  for (const dir of directions) {
+    const flips = getFlips([x, y], player, opponent, board, dir);
+    if (flips.length > 0) {
+      return true;
     }
   }
 
-  return { W, B };
+  return false;
 }
 
-const directions = [
-  [-1, -1],
-  [-1, 0],
-  [-1, 1],
-  [0, -1],
-  [0, 1],
-  [1, -1],
-  [1, 0],
-  [1, 1],
-];
-
-// Get the pieces to flip for a move in the given direction
-function getFlips(move, player, opponent, board, direction) {
+// Get the coordinates of the pieces to flip after a move
+function getFlips(coord, player, opponent, board, dir) {
+  const [dx, dy] = dir;
+  let x = coord[0] + dx;
+  let y = coord[1] + dy;
   const flips = [];
-  let [x, y] = move;
-  let [dx, dy] = direction;
 
-  x += dx;
-  y += dy;
-
-  while (x >= 0 && x < 8 && y >= 0 && y < 8 && board[x][y] === opponent) {
+  while (x >= 0 && x < SIZE && y >= 0 && y < SIZE && board[x][y] === opponent) {
     flips.push([x, y]);
     x += dx;
     y += dy;
   }
+  
 
-  if (x >= 0 && x < 8 && y >= 0 && y < 8 && board[x][y] === player) {
+  if (x >= 0 && x < SIZE && y >= 0 && y < SIZE && board[x][y] === player) {
     return flips;
   }
 
@@ -111,7 +131,7 @@ function getFlips(move, player, opponent, board, direction) {
 
 // Make a move and flip the appropriate pieces
 function makeMove(x, y, player, board) {
-  const opponent = player === "B" ? "W" : "B";
+  const opponent = player === 'B' ? 'W' : 'B';
   board[x][y] = player;
 
   for (const dir of directions) {
@@ -123,68 +143,53 @@ function makeMove(x, y, player, board) {
 }
 
 // Prompt the human player for a move
-// function humanMove(player, board) {
-//   return new Promise((resolve) => {
-//     rl.question(`Player ${player}, enter your move (x y): `, (input) => {
-//       const [x, y] = input.split(" ").map(Number);
-//       if (isValidMove(x, y, player, board)) {
-//         resolve([x, y]);
-//       } else {
-//         console.log("Invalid move. Please try again.");
-//         resolve(humanMove(player, board));
-//       }
-//     });
-//   });
-// }
-
-// Prompt the human player for a move
-async function humanMove(player, board) {
+function humanMove(player, board) {
   return new Promise((resolve) => {
     rl.question(`Player ${player}, enter your move (x y): `, (input) => {
-      const inputParts = input.split(" ");
-      if (inputParts.length !== 2) {
-        console.log(
-          'Invalid input. Please enter your move in the format "x y".'
-        );
-        resolve(humanMove(player, board));
+      const [x, y] = input.split(' ').map(Number);
+      if (isValidMove(x, y, player, board)) {
+        resolve([x, y]);
       } else {
-        const [x, y] = inputParts.map((part) => {
-          const num = parseInt(part, 10);
-          return isNaN(num) ? -1 : num;
-        });
-
-        if (isValidMove(x, y, player, board)) {
-          resolve([x, y]);
-        } else {
-          console.log("Invalid move. Please try again.");
-          resolve(humanMove(player, board));
-        }
+        console.log('Invalid move. Please try again.');
+        resolve(humanMove(player, board));
       }
     });
   });
 }
 
-// Check if a move is valid
-function isValidMove(x, y, player, board) {
-  if (x < 0 || x >= 8 || y < 0 || y >= 8 || board[x][y] !== ".") {
-    return false;
-  }
-
-  const opponent = player === "B" ? "W" : "B";
-  for (const dir of directions) {
-    const flips = getFlips([x, y], player, opponent, board, dir);
-    if (flips.length > 0) {
-      return true;
+// Get valid moves for a player
+function getValidMoves(player, board) {
+  const validMoves = [];
+  for (let i = 0; i < SIZE; i++) {
+    for (let j = 0; j < SIZE; j++) {
+     
+      if (isValidMove(i, j, player, board)) {
+        validMoves.push([i, j]);
+      }
     }
   }
+  return validMoves;
+}
 
-  return false;
+// CPU move for easy difficulty
+function cpuMove(player, board) {
+  const validMoves = getValidMoves(player, board);
+  if (validMoves.length > 0) {
+    return validMoves[Math.floor(Math.random() * validMoves.length)];
+  }
+  return null;
+}
+
+// CPU move for advanced difficulty
+function advancedCpuMove(player, board, depth) {
+  const result = minimax(board, depth, player, -Infinity, Infinity);
+  return result.move;
 }
 
 // Evaluation function to score a board state
 function evaluateBoard(board, player) {
   const { W, B } = score(board);
-  const scoreDiff = player === "W" ? W - B : B - W;
+  const scoreDiff = player === 'W' ? W - B : B - W;
   return scoreDiff;
 }
 
@@ -194,7 +199,7 @@ function minimax(board, depth, player, alpha, beta) {
     return { score: evaluateBoard(board, player) };
   }
 
-  const maximizingPlayer = player === "W"; // Assume White is the maximizing player
+  const maximizingPlayer = player === 'W'; // Assume White is the maximizing player
   const validMoves = getValidMoves(player, board);
 
   if (maximizingPlayer) {
@@ -204,7 +209,7 @@ function minimax(board, depth, player, alpha, beta) {
     for (const move of validMoves) {
       const newBoard = JSON.parse(JSON.stringify(board));
       makeMove(move[0], move[1], player, newBoard);
-      const result = minimax(newBoard, depth - 1, "B", alpha, beta);
+      const result = minimax(newBoard, depth - 1, 'B', alpha, beta);
       if (result.score > maxScore) {
         maxScore = result.score;
         bestMove = move;
@@ -217,10 +222,11 @@ function minimax(board, depth, player, alpha, beta) {
   } else {
     let minScore = Infinity;
     let bestMove = null;
+
     for (const move of validMoves) {
       const newBoard = JSON.parse(JSON.stringify(board));
       makeMove(move[0], move[1], player, newBoard);
-      const result = minimax(newBoard, depth - 1, "W", alpha, beta);
+      const result = minimax(newBoard, depth - 1, 'W', alpha, beta);
       if (result.score < minScore) {
         minScore = result.score;
         bestMove = move;
@@ -233,65 +239,67 @@ function minimax(board, depth, player, alpha, beta) {
   }
 }
 
-// Advanced CPU move using the Minimax algorithm with Alpha-Beta pruning
-function advancedCpuMove(player, board) {
-  const depth = 4; // Search depth; increase for a stronger but slower CPU player
-  const result = minimax(board, depth, player, -Infinity, Infinity);
-  return result.move;
-}
-
-async function chooseGameMode() {
+function askDifficulty() {
   return new Promise((resolve) => {
-    console.log("Select game mode:");
-    console.log("1. Human vs. Human");
-    console.log("2. Human vs. CPU");
-    rl.question("Enter your choice (1 or 2): ", (input) => {
-      if (input === "1" || input === "2") {
+    rl.question('Choose the game mode (1v1, easy, or advanced): ', (input) => {
+      if (input === '1v1' || input === 'easy' || input === 'advanced') {
         resolve(input);
       } else {
-        console.log("Invalid choice. Please try again.");
-        resolve(chooseGameMode());
+        console.log('Invalid mode. Please choose either 1v1, easy, or advanced.');
+        resolve(askDifficulty());
       }
     });
   });
 }
 
-async function main() {
-  const board = initBoard();
-  let currentPlayer = "B"; // Start with Black
-  const gameMode = await chooseGameMode();
+// Main game loop
+async function startGame(mode) {
+  mode = await askDifficulty();
+  const board = createBoard();
+  let currentPlayer = 'B';
 
   while (!isGameOver(board)) {
-    displayBoard(board);
-    const validMoves = getValidMoves(currentPlayer, board);
-    if (validMoves.length === 0) {
-      console.log(`No valid moves for player ${currentPlayer}. Pass.`);
+    printBoard(board);
+    const { W, B } = score(board);
+    console.log(`Score: W ${W} - ${B} B`);
+
+    let move;
+    if (currentPlayer === 'B') {
+      move = await humanMove(currentPlayer, board);
     } else {
-      let move;
-      if (gameMode === "1" || (gameMode === "2" && currentPlayer === "B")) {
+      if (mode === '1v1') {
         move = await humanMove(currentPlayer, board);
       } else {
-        move = advancedCpuMove(currentPlayer, board);
-        if (move === null) {
-          console.log(`No valid moves for player ${currentPlayer}. Pass.`);
-          currentPlayer = currentPlayer === "B" ? "W" : "B";
-          continue;
-        }
+        // Change depth to adjust difficulty (higher depth = more difficult)
+        const depth = mode === 'advanced' ? 4 : 2;
+        move = advancedCpuMove(currentPlayer, board, depth);
       }
-      makeMove(move[0], move[1], currentPlayer, board);
     }
-    currentPlayer = currentPlayer === "B" ? "W" : "B";
+
+    if (move) {
+      makeMove(move[0], move[1],
+        currentPlayer, board);
+      }
+  
+      currentPlayer = currentPlayer === 'B' ? 'W' : 'B';
+    }
+  
+    // Print final board and score
+    printBoard(board);
+    const { W, B } = score(board);
+    console.log(`Final score: W ${W} - ${B} B`);
+    if (W > B) {
+      console.log('White wins!');
+    } else if (W < B) {
+      console.log('Black wins!');
+    } else {
+      console.log('It\'s a draw!');
+    }
+  
+    rl.close();
   }
-
-  displayBoard(board);
-  const { W, B } = score(board);
-
-  if (W === B) {
-    console.log("Stalemate! Game is a draw.");
-  } else {
-    console.log(`Game over! White: ${W}, Black: ${B}`);
-  }
-}
-
-main();
-
+  
+  // Start the game with the desired mode
+  // Choose '1v1', 'easy', or 'advanced'
+  startGame('advanced');
+  
